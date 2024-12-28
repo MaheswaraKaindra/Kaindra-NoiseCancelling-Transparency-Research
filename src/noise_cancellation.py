@@ -60,5 +60,4 @@ temp_input_file = input("Insert .wav file path: ")
 input_file = INPUT_FILES_PATH + temp_input_file
 temp_input_file = input("Insert output file path: ")
 output_file = OUTPUT_FILES_PATH + temp_input_file
-threshold = float(input("Insert threshold (20 is Hardly Recommended): "))
-noise_cancellation(input_file, output_file, threshold)
+noise_cancellation(input_file, output_file, threshold=20)
