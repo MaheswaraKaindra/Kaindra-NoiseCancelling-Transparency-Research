@@ -1,34 +1,38 @@
 import numpy as np
 import scipy.io.wavfile as wav
-from scipy.linalg import svd
+from singular_value_decomposition import singular_value_decomposition as svd
 import os
 
 INPUT_FILES_PATH = "../data/audio-files/"
 OUTPUT_FILES_PATH = "../data/output-files/"
 def noise_cancellation(input_file, output_file, threshold):
-    # Loading audio file
+    """
+    Implementasi noise cancellation pada audio file menggunakan SVD.
+    """
+
+    # Memuat file audio
     if not os.path.exists(input_file):
         print("File not found")
         return
     
     rate, data = wav.read(input_file)
 
-    # Stereo to mono conversion
+    # Mengonversi audio stereo menjadi mono
     if data.ndim > 1:
         data = data.sum(axis=1)
     
-    # Normalizing audio data
+    # Normalisasi sinyal audio
     data = data.astype(np.float64)
     data /= np.max(np.abs(data))
 
-    # Reshaping audio data into a Matrix
+    # Membentuk sinyal audio dalam bentuk matriks (agar bisa dilakukan SVD)
     chunk_size = 1024
     num_chunks = len(data) // chunk_size
     audio_matrix = np.reshape(data[:num_chunks * chunk_size], (num_chunks, chunk_size))
     print("Audio Matrix: \n", audio_matrix)
     print("\n")
 
-    # Applying SVD to the audio Matrix
+    # Melakukan SVD pada matriks audio
     u, sigma, v_transposed = svd(audio_matrix, full_matrices=False)
 
     print("U Matrix: \n", u)
@@ -38,7 +42,7 @@ def noise_cancellation(input_file, output_file, threshold):
     print("v_transposed Matrix: \n", v_transposed)
     print("\n")
 
-    # Filtering out noise
+    # Mengeluarkan noise dari sigma
     anti_sigma = np.where(sigma < threshold, sigma, 0)
     print("Anti Sigma: \n", anti_sigma)
     print("\n")
@@ -46,13 +50,13 @@ def noise_cancellation(input_file, output_file, threshold):
     print("Filtered Sigma: \n", filtered_sigma)
     print("\n")
 
-    # Reconstructing audio signal
+    # Rekonstruksi audio
     filtered_audio = np.dot(u, np.dot(np.diag(filtered_sigma), v_transposed)).flatten()
 
-    # Denormalizing audio signal
+    # Mengembalikan audio ke rentang aslinya
     filtered_audio = (filtered_audio * 32767).astype(np.int16)
 
-    # Saving audio file
+    # Menyimpan audio hasil noise cancellation
     wav.write(output_file, rate, filtered_audio)
     print("Noise Cancellation Done")
 
@@ -60,4 +64,5 @@ temp_input_file = input("Insert .wav file path: ")
 input_file = INPUT_FILES_PATH + temp_input_file
 temp_input_file = input("Insert output file path: ")
 output_file = OUTPUT_FILES_PATH + temp_input_file
-noise_cancellation(input_file, output_file, threshold=20)
+threshold = int(input("Insert threshold (20 is highly recommended): "))
+noise_cancellation(input_file, output_file, threshold)
