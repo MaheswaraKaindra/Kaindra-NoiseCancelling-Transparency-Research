@@ -2,7 +2,7 @@ import numpy as np
 
 def singular_value_decomposition(A, full_matrices=True):
     """
-    Implementasi SVD dengan cara 1 berdasarkan Munir (2024)
+    Implementasi SVD dengan cara 1 berdasarkan Munir (2024) dan scipy.linalg.svd.
 
     Cara kerja SVD terinspirasi dari scipy.linalg.svd.
     """
