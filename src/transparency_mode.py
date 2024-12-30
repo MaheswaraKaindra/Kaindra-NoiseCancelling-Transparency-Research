@@ -30,27 +30,26 @@ def transparency_mode(main_audio, noise_audio, output_path, noise_volume):
     # Merekonstruksi audio input dan noise dalam bentuk matriks
     chunk_size = 1024
     num_chunks = min(len(main_data), len(noise_data)) // chunk_size
-
     main_matrix = np.reshape(main_data[:num_chunks * chunk_size], (num_chunks, chunk_size))
     noise_matrix = np.reshape(noise_data[:num_chunks * chunk_size], (num_chunks, chunk_size))
 
     # Melakukan SVD pada matriks audio input dan noise
-    U_main, Sigma_main, Vt_main = svd(main_matrix)
-    U_bg, Sigma_bg, Vt_bg = svd(noise_matrix)
+    main_U, main_Sigma, main_Vt = svd(main_matrix)
+    noise_U, noise_Sigma, noise_Vt = svd(noise_matrix)
 
-    # Menyamakan dimensi Sigma_main dan Sigma_bg
-    Sigma_noise_matrix = np.zeros((U_bg.shape[1], Vt_bg.shape[0]))  # Match dimensions of U_bg and Vt_bg
-    np.fill_diagonal(Sigma_noise_matrix, Sigma_bg[:min(len(Sigma_bg), Sigma_noise_matrix.shape[0])])
+    # Menyamakan dimensi main_Sigma dan noise_Sigma
+    Sigma_noise_matrix = np.zeros((noise_U.shape[1], noise_Vt.shape[0]))  # Match dimensions of noise_U and noise_Vt
+    np.fill_diagonal(Sigma_noise_matrix, noise_Sigma[:min(len(noise_Sigma), Sigma_noise_matrix.shape[0])])
 
     # Menyesuaikan volume noise
     Sigma_noise_matrix *= noise_volume
 
-    # Menyamakan dimensi U_bg dan Vt_bg
-    U_bg = U_bg[:, :U_main.shape[1]]
-    Vt_bg = Vt_bg[:Vt_main.shape[0], :]
+    # Menyamakan dimensi noise_U dan noise_Vt
+    noise_U = noise_U[:, :main_U.shape[1]]
+    noise_Vt = noise_Vt[:main_Vt.shape[0], :]
 
     # Merekonstruksi noise yang disesuaikan
-    adjusted_noise_matrix = np.dot(U_bg, np.dot(Sigma_noise_matrix, Vt_bg))
+    adjusted_noise_matrix = np.dot(noise_U, np.dot(Sigma_noise_matrix, noise_Vt))
 
     # Menggabungkan audio input dan noise
     combined_matrix = main_matrix + adjusted_noise_matrix
