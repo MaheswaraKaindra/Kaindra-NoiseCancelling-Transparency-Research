@@ -2,42 +2,77 @@ import numpy as np
 from singular_value_decomposition import singular_value_decomposition as svd
 import scipy.io.wavfile as wav
 
-def transparency_mode(main_audio, background_audio, output_path, rain_volume=0.5):
-    rate_main, data_main = wav.read(main_audio)
-    rate_bg, data_bg = wav.read(background_audio)
+def transparency_mode(main_audio, noise_audio, output_path, noise_volume):
+    """
+    Implementasi mode transparansi pada audio file menggunakan SVD.
+    """
+    
+    # Memuat file audio input dan noise
+    main_rate, main_data = wav.read(main_audio)
+    noise_rate, noise_data = wav.read(noise_audio)
 
-    assert rate_main == rate_bg, "Sample rates must match!"
+    # Mengubah format audio stereo menjadi mono
+    if main_data.ndim > 1:
+        main_data = main_data.mean(axis=1)
+    if noise_data.ndim > 1:
+        noise_data = noise_data.mean(axis=1)
 
-    if data_main.ndim > 1:
-        data_main = data_main.mean(axis=1)
-    if data_bg.ndim > 1:
-        data_bg = data_bg.mean(axis=1)
+    # Menormalkan audio input dan noise
+    main_data = main_data.astype(np.float64) / np.max(np.abs(main_data))
+    noise_data = noise_data.astype(np.float64) / np.max(np.abs(noise_data))
 
-    data_main = data_main.astype(np.float64) / np.max(np.abs(data_main))
-    data_bg = data_bg.astype(np.float64) / np.max(np.abs(data_bg))
+    # Mengatur panjang noise agar sesuai dengan panjang audio input
+    if len(noise_data) > len(main_data):
+        noise_data = noise_data[:len(main_data)]
+    elif len(noise_data) < len(main_data):
+        noise_data = np.pad(noise_data, (0, len(main_data) - len(noise_data)), mode='constant', constant_values=0)
 
-    if len(data_bg) > len(data_main):
-        data_bg = data_bg[:len(data_main)]
-    elif len(data_bg) < len(data_main):
-        data_bg = np.pad(data_bg, (0, len(data_main) - len(data_bg)), mode='constant', constant_values=0)
-
+    # Merekonstruksi audio input dan noise dalam bentuk matriks
     chunk_size = 1024
-    num_chunks_main = len(data_main) // chunk_size
-    num_chunks_bg = len(data_bg) // chunk_size
+    num_chunks = min(len(main_data), len(noise_data)) // chunk_size
 
-    main_matrix = np.reshape(data_main[:num_chunks_main * chunk_size], (num_chunks_main, chunk_size))
-    bg_matrix = np.reshape(data_bg[:num_chunks_bg * chunk_size], (num_chunks_bg, chunk_size))
+    main_matrix = np.reshape(main_data[:num_chunks * chunk_size], (num_chunks, chunk_size))
+    noise_matrix = np.reshape(noise_data[:num_chunks * chunk_size], (num_chunks, chunk_size))
 
+    # Melakukan SVD pada matriks audio input dan noise
     U_main, Sigma_main, Vt_main = svd(main_matrix)
-    U_bg, Sigma_bg, Vt_bg = svd(bg_matrix)
+    U_bg, Sigma_bg, Vt_bg = svd(noise_matrix)
 
-    Sigma_bg *= rain_volume
+    # Menyamakan dimensi Sigma_main dan Sigma_bg
+    Sigma_noise_matrix = np.zeros((U_bg.shape[1], Vt_bg.shape[0]))  # Match dimensions of U_bg and Vt_bg
+    np.fill_diagonal(Sigma_noise_matrix, Sigma_bg[:min(len(Sigma_bg), Sigma_noise_matrix.shape[0])])
 
-    adjusted_bg_matrix = np.dot(U_bg, np.dot(np.diag(Sigma_bg), Vt_bg))
+    # Menyesuaikan volume noise
+    Sigma_noise_matrix *= noise_volume
 
-    combined_matrix = main_matrix + adjusted_bg_matrix[:main_matrix.shape[0], :]
+    # Menyamakan dimensi U_bg dan Vt_bg
+    U_bg = U_bg[:, :U_main.shape[1]]
+    Vt_bg = Vt_bg[:Vt_main.shape[0], :]
 
+    # Merekonstruksi noise yang disesuaikan
+    adjusted_noise_matrix = np.dot(U_bg, np.dot(Sigma_noise_matrix, Vt_bg))
+
+    # Menggabungkan audio input dan noise
+    combined_matrix = main_matrix + adjusted_noise_matrix
+
+    # Merekonstruksi audio gabungan
     combined_audio = combined_matrix.flatten()
     combined_audio = (combined_audio * 32767).astype(np.int16)
 
-    wav.write(output_path, rate_main, combined_audio)
+    # Menyimpan audio output pada direktori yang ditentukan
+    wav.write(output_path, main_rate, combined_audio)
+
+# Input and output file paths
+INPUT_FILES_PATH = "../data/audio-files/"
+OUTPUT_FILES_PATH = "../data/output-files/"
+NOISE_FILES_PATH = "../data/noise-files/"
+
+temp_input_file = input("Insert .wav file path: ")
+input_file = INPUT_FILES_PATH + temp_input_file
+temp_noise_file = input("Insert noise file path: ")
+noise_file = NOISE_FILES_PATH + temp_noise_file
+temp_input_file = input("Insert output file path: ")
+output_file = OUTPUT_FILES_PATH + temp_input_file
+threshold = float(input("Insert threshold (0.5 is highly recommended): "))
+
+transparency_mode(input_file, noise_file, output_file, threshold)
