@@ -60,6 +60,7 @@ def transparency_mode(main_audio, noise_audio, output_path, noise_volume):
 
     # Menyimpan audio output pada direktori yang ditentukan
     wav.write(output_path, main_rate, combined_audio)
+    print("Transparency Mode Done")
 
 # Input and output file paths
 INPUT_FILES_PATH = "../data/audio-files/"
