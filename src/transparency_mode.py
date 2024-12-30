@@ -38,7 +38,7 @@ def transparency_mode(main_audio, noise_audio, output_path, noise_volume):
     noise_U, noise_Sigma, noise_Vt = svd(noise_matrix)
 
     # Menyamakan dimensi main_Sigma dan noise_Sigma
-    Sigma_noise_matrix = np.zeros((noise_U.shape[1], noise_Vt.shape[0]))  # Match dimensions of noise_U and noise_Vt
+    Sigma_noise_matrix = np.zeros((noise_U.shape[1], noise_Vt.shape[0])) 
     np.fill_diagonal(Sigma_noise_matrix, noise_Sigma[:min(len(noise_Sigma), Sigma_noise_matrix.shape[0])])
 
     # Menyesuaikan volume noise
